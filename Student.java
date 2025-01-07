@@ -63,7 +63,7 @@ public class Student {
         this.enrollmentDate = enrollmentDate;
     }
 
-    // Method to collect student details from user input
+    // Create a new student instance
     public static Student createNewStudent() {
         Scanner scanner = new Scanner(System.in);
 
@@ -86,7 +86,7 @@ public class Student {
         return student;
     }
 
-    // Method to save student details to the database
+    // Save student to database
     public boolean saveToDatabase() {
         String sql = "INSERT INTO students (first_name, last_name, email, phone_number, enrollment_date) VALUES (?, ?, ?, ?, ?)";
         List<Object> params = Arrays.asList(firstName, lastName, email, phoneNumber, enrollmentDate);
@@ -95,12 +95,66 @@ public class Student {
         return result > 0;
     }
 
-    // Method to retrieve all students from the database
+    // Retrieve all students
     public static List<Student> getAllStudents() {
         String sql = "SELECT * FROM students";
         List<Student> students = new ArrayList<>();
 
         try (QueryResult queryResult = DBQueryUtil.executeQuery(sql, new ArrayList<>())) {
+            if (queryResult != null) {
+                ResultSet resultSet = queryResult.getResultSet();
+                while (resultSet.next()) {
+                    Student student = new Student();
+                    student.setStudentId(resultSet.getInt("student_id"));
+                    student.setFirstName(resultSet.getString("first_name"));
+                    student.setLastName(resultSet.getString("last_name"));
+                    student.setEmail(resultSet.getString("email"));
+                    student.setPhoneNumber(resultSet.getString("phone_number"));
+                    student.setEnrollmentDate(resultSet.getDate("enrollment_date"));
+                    students.add(student);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return students;
+    }
+
+    // Update student details
+    public boolean updateInDatabase() {
+        String sql = "UPDATE students SET first_name = ?, last_name = ?, email = ?, phone_number = ?, enrollment_date = ? WHERE student_id = ?";
+        List<Object> params = Arrays.asList(firstName, lastName, email, phoneNumber, enrollmentDate, studentId);
+
+        int result = DBQueryUtil.executeUpdate(sql, params);
+        return result > 0;
+    }
+
+    // Delete student from database
+    public boolean deleteFromDatabase() {
+        String sql = "DELETE FROM students WHERE student_id = ?";
+        List<Object> params = Arrays.asList(studentId);
+
+        int result = DBQueryUtil.executeUpdate(sql, params);
+        return result > 0;
+    }
+
+    // Add student to a project
+    public boolean linkToProject(int projectId) {
+        String sql = "INSERT INTO project_students (project_id, student_id) VALUES (?, ?)";
+        List<Object> params = Arrays.asList(projectId, studentId);
+
+        int result = DBQueryUtil.executeUpdate(sql, params);
+        return result > 0;
+    }
+
+    // Get students linked to a project
+    public static List<Student> getStudentsByProject(int projectId) {
+        String sql = "SELECT s.* FROM students s JOIN project_students ps ON s.student_id = ps.student_id WHERE ps.project_id = ?";
+        List<Student> students = new ArrayList<>();
+        List<Object> params = Arrays.asList(projectId);
+
+        try (QueryResult queryResult = DBQueryUtil.executeQuery(sql, params)) {
             if (queryResult != null) {
                 ResultSet resultSet = queryResult.getResultSet();
                 while (resultSet.next()) {

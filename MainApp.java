@@ -1,89 +1,208 @@
 import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Scanner;
 
 public class MainApp {
     public static void main(String[] args) {
-        // Add a new student
-        System.out.println("=== Add New Student ===");
-        Student newStudent = Student.createNewStudent(); // Collect student details
-        if (newStudent.saveToDatabase()) {
-            System.out.println("Student added successfully.");
-        } else {
-            System.out.println("Failed to add student.");
-        }
+        Scanner scanner = new Scanner(System.in);
+        boolean running = true;
 
-        // Retrieve and display student information
-        System.out.println("\n=== Retrieve Students ===");
-        List<Student> students = Student.getAllStudents();
-        System.out.println("List of Students:");
-        for (Student student : students) {
-            System.out.println("ID: " + student.getStudentId());
-            System.out.println("Name: " + student.getFirstName() + " " + student.getLastName());
-            System.out.println("Email: " + student.getEmail());
-            System.out.println("Phone: " + student.getPhoneNumber());
-            System.out.println("Enrollment Date: " + student.getEnrollmentDate());
-            System.out.println("-------------------------");
-        }
-        String studentQuery = "SELECT * FROM students WHERE email LIKE ?";
-        List<Object> studentParams = Arrays.asList("%@example.com%"); // Example filter for email domain
+        while (running) {
+            System.out.println("\n=== Project Management System ===");
+            System.out.println("1. Add New Project");
+            System.out.println("2. Retrieve All Projects");
+            System.out.println("3. Update Project");
+            System.out.println("4. Delete Project");
+            System.out.println("5. Add Student to Project");
+            System.out.println("6. Retrieve Students in a Project");
+            System.out.println("7. Exit");
+            System.out.print("Select an option (1-7): ");
 
-        try (QueryResult queryResult = DBQueryUtil.executeQuery(studentQuery, studentParams)) {
-            if (queryResult != null) {
-                ResultSet resultSet = queryResult.getResultSet();
-                while (resultSet.next()) {
-                    System.out.println("Student ID: " + resultSet.getInt("student_id"));
-                    System.out.println("First Name: " + resultSet.getString("first_name"));
-                    System.out.println("Last Name: " + resultSet.getString("last_name"));
-                    System.out.println("Email: " + resultSet.getString("email"));
-                    System.out.println("Phone Number: " + resultSet.getString("phone_number"));
-                    System.out.println("Enrollment Date: " + resultSet.getDate("enrollment_date"));
-                    System.out.println("-------------------------");
-                }
+            int choice;
+            try {
+                choice = Integer.parseInt(scanner.nextLine());
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid input. Please enter a number between 1 and 7.");
+                continue;
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+            switch (choice) {
+                case 1:
+                    addNewProject(scanner);
+                    break;
+                case 2:
+                    retrieveAllProjects();
+                    break;
+                case 3:
+                    updateProject(scanner);
+                    break;
+                case 4:
+                    deleteProject(scanner);
+                    break;
+                case 5:
+                    addStudentToProject(scanner);
+                    break;
+                case 6:
+                    retrieveStudentsInProject(scanner);
+                    break;
+                case 7:
+                    System.out.println("Exiting the application. Goodbye!");
+                    running = false;
+                    break;
+                default:
+                    System.out.println("Invalid choice. Please select a valid option.");
+            }
         }
 
-        // Add a new project
-        System.out.println("\n=== Add New Project ===");
-        String projectSql = "INSERT INTO projects (project_name, start_date, end_date, status, description) VALUES (?, ?, ?, ?, ?)";
-        List<Object> projectParams = Arrays.asList(
-                "Project A",
-                Date.valueOf("2024-01-01"),
-                Date.valueOf("2024-12-31"),
-                "In Progress",
-                "Description of Project A"
-        );
+        scanner.close();
+    }
 
-        int projectResult = DBQueryUtil.executeUpdate(projectSql, projectParams);
-        if (projectResult > 0) {
+    // Add a new project
+    private static void addNewProject(Scanner scanner) {
+        System.out.println("\n=== Add New Project ===");
+        Project newProject = new Project();
+        System.out.print("Enter Project Name: ");
+        newProject.setProjectName(scanner.nextLine());
+        System.out.print("Enter Start Date (YYYY-MM-DD): ");
+        newProject.setStartDate(Date.valueOf(scanner.nextLine()));
+        System.out.print("Enter End Date (YYYY-MM-DD): ");
+        newProject.setEndDate(Date.valueOf(scanner.nextLine()));
+        System.out.print("Enter Status: ");
+        newProject.setStatus(scanner.nextLine());
+        System.out.print("Enter Description: ");
+        newProject.setDescription(scanner.nextLine());
+
+        if (newProject.saveToDatabase()) {
             System.out.println("Project added successfully.");
         } else {
             System.out.println("Failed to add project.");
         }
+    }
 
-        // Retrieve and display project information
+    // Retrieve and display all projects
+    private static void retrieveAllProjects() {
         System.out.println("\n=== Retrieve Projects ===");
-        String projectQuery = "SELECT * FROM projects WHERE status = ?";
-        List<Object> projectParams1 = Arrays.asList("In Progress");
+        List<Project> projects = Project.getAllProjects();
 
-        try (QueryResult queryResult = DBQueryUtil.executeQuery(projectQuery, projectParams1)) {
-            if (queryResult != null) {
-                ResultSet resultSet = queryResult.getResultSet();
-                while (resultSet.next()) {
-                    System.out.println("Project Name: " + resultSet.getString("project_name"));
-                    System.out.println("Start Date: " + resultSet.getDate("start_date"));
-                    System.out.println("End Date: " + resultSet.getDate("end_date"));
-                    System.out.println("Status: " + resultSet.getString("status"));
-                    System.out.println("Description: " + resultSet.getString("description"));
-                    System.out.println("-------------------------");
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        if (projects.isEmpty()) {
+            System.out.println("No projects found.");
+            return;
         }
+
+        System.out.println("==================================================================================================");
+        System.out.printf("| %-5s | %-20s | %-12s | %-12s | %-15s | %-30s |\n",
+                "ID", "Name", "Start Date", "End Date", "Status", "Description");
+        System.out.println("==================================================================================================");
+
+        for (Project project : projects) {
+            System.out.printf("| %-5d | %-20s | %-12s | %-12s | %-15s | %-30s |\n",
+                    project.getId(),
+                    project.getProjectName(),
+                    project.getStartDate(),
+                    project.getEndDate(),
+                    project.getStatus(),
+                    project.getDescription());
+        }
+        System.out.println("==================================================================================================");
+    }
+
+    // Update an existing project
+    private static void updateProject(Scanner scanner) {
+        System.out.println("\n=== Update Project ===");
+        System.out.print("Enter Project ID to Update: ");
+        int updateId;
+
+        try {
+            updateId = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid ID. Please enter a valid number.");
+            return;
+        }
+
+        Project updateProject = new Project();
+        updateProject.setId(updateId);
+        System.out.print("Enter New Project Name: ");
+        updateProject.setProjectName(scanner.nextLine());
+        System.out.print("Enter New Start Date (YYYY-MM-DD): ");
+        updateProject.setStartDate(Date.valueOf(scanner.nextLine()));
+        System.out.print("Enter New End Date (YYYY-MM-DD): ");
+        updateProject.setEndDate(Date.valueOf(scanner.nextLine()));
+        System.out.print("Enter New Status: ");
+        updateProject.setStatus(scanner.nextLine());
+        System.out.print("Enter New Description: ");
+        updateProject.setDescription(scanner.nextLine());
+
+        if (updateProject.updateInDatabase()) {
+            System.out.println("Project updated successfully.");
+        } else {
+            System.out.println("Failed to update project. Ensure the ID exists.");
+        }
+    }
+
+    // Delete a project
+    private static void deleteProject(Scanner scanner) {
+        System.out.println("\n=== Delete Project ===");
+        System.out.print("Enter Project ID to Delete: ");
+        int deleteId;
+
+        try {
+            deleteId = Integer.parseInt(scanner.nextLine());
+        } catch (NumberFormatException e) {
+            System.out.println("Invalid ID. Please enter a valid number.");
+            return;
+        }
+
+        Project deleteProject = new Project();
+        deleteProject.setId(deleteId);
+
+        if (deleteProject.deleteFromDatabase()) {
+            System.out.println("Project deleted successfully.");
+        } else {
+            System.out.println("Failed to delete project. Ensure the ID exists.");
+        }
+    }
+
+    // Add a student to a project
+    private static void addStudentToProject(Scanner scanner) {
+        System.out.println("\n=== Add Student to Project ===");
+        ProjectStudent projectStudent = new ProjectStudent();
+
+        System.out.print("Enter Project ID: ");
+        projectStudent.setProjectId(Integer.parseInt(scanner.nextLine()));
+
+        System.out.print("Enter Student ID: ");
+        projectStudent.setStudentId(Integer.parseInt(scanner.nextLine()));
+
+        System.out.print("Enter Role (e.g., Developer, Designer): ");
+        projectStudent.setRole(scanner.nextLine());
+
+        if (projectStudent.addStudentToProject()) {
+            System.out.println("Student added to project successfully.");
+        } else {
+            System.out.println("Failed to add student to project.");
+        }
+    }
+
+    // Retrieve students working on a project based on Project ID
+    private static void retrieveStudentsInProject(Scanner scanner) {
+        System.out.println("\n=== Retrieve Students in a Project ===");
+        System.out.print("Enter Project ID: ");
+        int projectId = Integer.parseInt(scanner.nextLine());
+
+        List<ProjectStudent> students = ProjectStudent.getStudentsByProject(projectId);
+
+        if (students.isEmpty()) {
+            System.out.println("No students found for this project.");
+            return;
+        }
+
+        System.out.println("==================================================================================================");
+        System.out.printf("| %-5s | %-15s |\n", "Student ID", "Role");
+        System.out.println("==================================================================================================");
+
+        for (ProjectStudent student : students) {
+            System.out.printf("| %-5d | %-15s |\n", student.getStudentId(), student.getRole());
+        }
+        System.out.println("==================================================================================================");
     }
 }
